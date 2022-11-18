@@ -1,0 +1,262 @@
+
+// Developed by TerminatorOTW
+
+/**
+ * Returns the closed loop of Convex Hull:
+ * {q, r1, r2, r3, q}
+ */
+
+package penguhull;
+
+import java.util.Arrays;
+
+public class PenguHull {
+
+    /**
+     *  Main algorithm
+     */
+    private int[][] quickHull(int[][] points) {
+        
+        // main Convex Hull Set
+        int[][] convexHull = {};
+        
+        // finding the leftmost and rightmost point in the set
+        final int[] leftMostPoint = findLeftmostPoint(points);
+        final int[] rightMostPoint = findRightmostPoint(points);
+        
+        /**
+         * divides points based on their position,
+         * from the line segment between leftMostPoint and rightMostPoint,
+         * also removes points which are on the line segment
+         */
+        int[][] pointsAboveSeg = createSegment(points, leftMostPoint, rightMostPoint, true);
+        int[][] pointsBelowSeg = createSegment(points, leftMostPoint, rightMostPoint, false);
+       
+        // find the hull above the line segment of leftMost and rightMost Point
+        int[][] firstHull = quickHullLeftOf(pointsAboveSeg, leftMostPoint, rightMostPoint);
+        
+        // find the hull below the line segment of leftMost and rightMost Point
+        int[][] secondHull = quickHullLeftOf(pointsBelowSeg, rightMostPoint, leftMostPoint);
+        
+        // combine first and second hull
+        convexHull = combineHull(firstHull, secondHull);
+        
+        /**
+         * returns the convex hull, in the form of
+         * {q, r1, r2, r3..., q} in a closed loop
+         */
+        return combineArray(convexHull, new int[][]{rightMostPoint});
+    }
+    
+    // finds the convex hull which covers all the points above/below the line segment
+    private int[][] quickHullLeftOf(int[][] points, int[] p, int[] q) {
+        
+        int[][] segA = null;
+        int[][] segB = null;
+        int[][] segC = null;
+        
+        // finds the farthest point from the line segment
+        int[] farthestPoint = findPointFarthestLeftFrom(points, p, q);
+        
+        /**
+         * checking points on the right side of the line segment,
+         * joining farthestPoint and q
+         */
+        if (existsPointLeftOf(points, farthestPoint, q))
+            segB = quickHullLeftOf(points, farthestPoint, q);
+        
+        /**
+         * checking points on the left side of the line segment,
+         * joining farthestPoint and p
+         */
+        if (existsPointLeftOf(points, p, farthestPoint))
+            segC = quickHullLeftOf(points, p, farthestPoint);
+        
+        // self explanatory
+        if (segB != null && segC != null) {
+            segA = combineHull(segB, segC);
+        } else if (segB == null && segC != null) {
+            segA = combineArray(new int[][]{q}, segC);
+        } else if (segB != null && segC == null) {
+            segA = combineArray(segB, new int[][]{p});
+        } else {
+            segA = new int[][]{q, farthestPoint, p};
+        }
+        
+        return segA;
+    }
+
+    /**
+     * combines two sets,
+     * assuming: firstHull[firstHull.length-1] == secondHull[0]
+     * 
+     * it removes the last element of firstHull and first element
+     * of second hull
+     */
+    private int[][] combineHull(int[][] firstHull, int[][] secondHull) {
+        
+        int[][] convexHull = new int[firstHull.length + secondHull.length - 2][];
+        int pointer = 0;
+        
+        for (int i = 0; i < (firstHull.length - 1); i++) {
+            convexHull[pointer] = firstHull[i];
+            pointer++;
+        }
+        
+        for (int i = 0; i < (secondHull.length - 1); i++) {
+            convexHull[pointer] = secondHull[i];
+            pointer++;
+        }
+        
+        return convexHull;
+    }
+    
+    /**
+     * functions
+     */
+    private int[] findPointFarthestLeftFrom(int[][] points, int[] firstLinePoint, int[] secondLinePoint) {
+        double maxDistance = 0.0;
+        int[] leftmostPoint = null;
+        for (int[] point : points) {
+            double distance = Math.abs(signedDistance(point, firstLinePoint, secondLinePoint));
+            if (isPointLeftOf(point, firstLinePoint, secondLinePoint) && distance > maxDistance) {
+                maxDistance = distance;
+                leftmostPoint = point;
+            }
+        }
+        return leftmostPoint;
+    }
+    
+    // finds the leftmost point in the plane from the given set
+    private int[] findLeftmostPoint(int[][] points) {
+        int[] currLeftmost = points[0];
+        for (int i=1; i < points.length; i++) {
+            if (points[i][0] < currLeftmost[0])
+                currLeftmost = points[i];
+        }
+        return currLeftmost;
+    }
+    
+    // finds the rightmost point in the plane from the given set
+    private int[] findRightmostPoint(int[][] points) {
+        int[] currRightmost = points[0];
+        for (int i=1; i < points.length; i++) {
+            if (points[i][0] > currRightmost[0])
+                currRightmost = points[i];
+        }
+        return currRightmost;
+    }
+
+    // checks if the point is in the left of the line segment
+    public boolean isPointLeftOf(int[] point, int[] firstLinePoint, int[] secondLinePoint) {
+        double n = signedDistance(point, firstLinePoint, secondLinePoint);
+        return n < 0;
+    }
+
+    // checks if their exists any points on the left of the line segment
+    public boolean existsPointLeftOf(int[][] points, int[] firstLinePoint, int[] secondLinePoint) {
+        for (int[] point : points) {
+            if (isPointLeftOf(point, firstLinePoint, secondLinePoint)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private double signedDistance(int[] point, int[] firstLinePoint, int[] secondLinePoint) {
+        int det = (secondLinePoint[0] - firstLinePoint[0]) * (firstLinePoint[1] - point[1])
+            - (firstLinePoint[0] - point[0]) * (secondLinePoint[1] - firstLinePoint[1]);
+        double len = Math.sqrt(
+            Math.pow(secondLinePoint[0] - firstLinePoint[0], 2) + Math.pow(secondLinePoint[1] - firstLinePoint[1], 2)
+        );
+
+        return det / len;
+    }
+
+    // i didn't use it
+    private String pointsToPlotString(int[][] points) {
+        return "";
+    }
+    
+    // divides points based upon their position(left/right) from the line segment
+    private int[][] createSegment(int[][] points, int[] x, int[] y, boolean up) {
+        
+        int[][] newPoints = new int[points.length][];
+        int pointerA = 0;
+        
+        for (int[] i : points) {
+            if (up) {
+                if (isPointLeftOf(i, x, y)) {
+                    newPoints[pointerA] = i;
+                    pointerA++;
+                }
+            } else {
+                if (isPointLeftOf(i, y, x)) {
+                    newPoints[pointerA] = i;
+                    pointerA++;
+                }
+            }
+        }
+        
+        int[][] returnPoints = new int[pointerA][];
+        
+        System.arraycopy(newPoints, 0, returnPoints, 0, pointerA);
+        
+        return returnPoints;
+    }
+    
+    // helpful method
+    private int[][] combineArray(int[][] a, int[][] b) {
+        int[][] c = new int[a.length+b.length][];
+        int pointer = 0;
+        for (int[] i : a) {
+            c[pointer] = i;
+            pointer++;
+        }
+        for (int[] j : b) {
+            c[pointer] = j;
+            pointer++;
+        }
+        return c;
+    }
+    
+    /**
+     * flips the array
+     * ogArray = [a1, a2, a3... an];
+     * newArray = [an ....., a3, a2, a1]
+     * 
+     * didn't use it
+     */
+    private int[][] flipArray(int[][] a) {
+        int[][] b = new int[a.length][];
+        for (int i = 0; i < a.length; i++) {
+            b[a.length-(i+1)] = a[i];
+        }
+        return b;
+    }
+    
+    private void print2DArray(int[][] array) {
+        for (int[] i : array)
+            System.out.println(Arrays.toString(i));
+    }
+    
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String[] args) {
+        // main set containing all points
+        int[][] mainSet = new int[][]{
+            new int[]{-1, -1}, new int[]{1, -1},
+            new int[]{3, -1}, new int[]{1, -2},
+            new int[]{1, 1}, new int[]{2, 2},
+            new int[]{3, 2}};
+        
+        PenguHull mainClass = new PenguHull();
+        
+        System.out.print("MainSet: ");
+        mainClass.print2DArray(mainSet);
+        System.out.print("ConvexHull: ");
+        mainClass.print2DArray(mainClass.quickHull(mainSet));
+    }
+    
+}
