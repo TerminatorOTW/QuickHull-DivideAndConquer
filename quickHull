@@ -1,11 +1,4 @@
 
-// Developed by TerminatorOTW
-
-/**
- * Returns the closed loop of Convex Hull:
- * {q, r1, r2, r3, q}
- */
-
 package penguhull;
 
 import java.util.Arrays;
@@ -14,11 +7,13 @@ public class PenguHull {
 
     /**
      *  Main algorithm
+     * @param points
+     * @return convexHull
      */
-    private int[][] quickHull(int[][] points) {
+    public static int[][] quickHull(int[][] points) {
         
         // main Convex Hull Set
-        int[][] convexHull = {};
+        int[][] convexHull;
         
         // finding the leftmost and rightmost point in the set
         final int[] leftMostPoint = findLeftmostPoint(points);
@@ -38,20 +33,27 @@ public class PenguHull {
         // find the hull below the line segment of leftMost and rightMost Point
         int[][] secondHull = quickHullLeftOf(pointsBelowSeg, rightMostPoint, leftMostPoint);
         
+        // if no points exists above or below the line segment
+        if (firstHull == null && secondHull == null)
+            return new int[][]{leftMostPoint, rightMostPoint, leftMostPoint};
+        
         // combine first and second hull
-        convexHull = combineHull(firstHull, secondHull);
+        convexHull = combineHulls(secondHull, firstHull);
         
         /**
          * returns the convex hull, in the form of
-         * {q, r1, r2, r3..., q} in a closed loop
+         * {p, r1, r2, r3..., p} in a closed loop
          */
-        return combineArray(convexHull, new int[][]{rightMostPoint});
+        return combineHulls(new int[][]{leftMostPoint}, convexHull);
     }
     
     // finds the convex hull which covers all the points above/below the line segment
-    private int[][] quickHullLeftOf(int[][] points, int[] p, int[] q) {
+    public static int[][] quickHullLeftOf(int[][] points, int[] p, int[] q) {
         
-        int[][] segA = null;
+        if (points.length < 1)
+            return null;
+        
+        int[][] segA;
         int[][] segB = null;
         int[][] segC = null;
         
@@ -74,11 +76,11 @@ public class PenguHull {
         
         // self explanatory
         if (segB != null && segC != null) {
-            segA = combineHull(segB, segC);
+            segA = combineHulls(segB, segC);
         } else if (segB == null && segC != null) {
-            segA = combineArray(new int[][]{q}, segC);
+            segA = combineHulls(new int[][]{q}, segC);
         } else if (segB != null && segC == null) {
-            segA = combineArray(segB, new int[][]{p});
+            segA = combineHulls(segB, new int[][]{p});
         } else {
             segA = new int[][]{q, farthestPoint, p};
         }
@@ -87,34 +89,51 @@ public class PenguHull {
     }
 
     /**
-     * combines two sets,
-     * assuming: firstHull[firstHull.length-1] == secondHull[0]
-     * 
-     * it removes the last element of firstHull and first element
-     * of second hull
+     * combines two Hulls
      */
-    private int[][] combineHull(int[][] firstHull, int[][] secondHull) {
+    public static int[][] combineHulls(int[][] firstHull, int[][] secondHull) {
         
-        int[][] convexHull = new int[firstHull.length + secondHull.length - 2][];
-        int pointer = 0;
+        if (firstHull != null && secondHull == null)
+            return firstHull;
+        else if (firstHull == null && secondHull != null)
+            return secondHull;
         
-        for (int i = 0; i < (firstHull.length - 1); i++) {
-            convexHull[pointer] = firstHull[i];
-            pointer++;
+        if (firstHull != null && secondHull != null) {
+            int[][] convexHull;
+            int pointer = 0;
+            if (firstHull[firstHull.length-1] == secondHull[0]) {
+                // closed Hull
+                convexHull = new int[firstHull.length + secondHull.length - 1][];
+
+                for (int i = 0; i < (firstHull.length - 1); i++) {
+                    convexHull[pointer] = firstHull[i];
+                    pointer++;
+                }
+            } else {
+                // open Hull
+                convexHull = new int[firstHull.length + secondHull.length][];
+
+                for (int[] i : firstHull) {
+                    convexHull[pointer] = i;
+                    pointer++;
+                }
+            }
+
+            for (int[] i : secondHull) {
+                convexHull[pointer] = i;
+                pointer++;
+            }
+            
+            return convexHull;
         }
         
-        for (int i = 0; i < (secondHull.length - 1); i++) {
-            convexHull[pointer] = secondHull[i];
-            pointer++;
-        }
-        
-        return convexHull;
+        return null;
     }
     
     /**
      * functions
      */
-    private int[] findPointFarthestLeftFrom(int[][] points, int[] firstLinePoint, int[] secondLinePoint) {
+    public static int[] findPointFarthestLeftFrom(int[][] points, int[] firstLinePoint, int[] secondLinePoint) {
         double maxDistance = 0.0;
         int[] leftmostPoint = null;
         for (int[] point : points) {
@@ -128,7 +147,7 @@ public class PenguHull {
     }
     
     // finds the leftmost point in the plane from the given set
-    private int[] findLeftmostPoint(int[][] points) {
+    public static int[] findLeftmostPoint(int[][] points) {
         int[] currLeftmost = points[0];
         for (int i=1; i < points.length; i++) {
             if (points[i][0] < currLeftmost[0])
@@ -138,7 +157,7 @@ public class PenguHull {
     }
     
     // finds the rightmost point in the plane from the given set
-    private int[] findRightmostPoint(int[][] points) {
+    public static int[] findRightmostPoint(int[][] points) {
         int[] currRightmost = points[0];
         for (int i=1; i < points.length; i++) {
             if (points[i][0] > currRightmost[0])
@@ -148,13 +167,13 @@ public class PenguHull {
     }
 
     // checks if the point is in the left of the line segment
-    public boolean isPointLeftOf(int[] point, int[] firstLinePoint, int[] secondLinePoint) {
+    public static boolean isPointLeftOf(int[] point, int[] firstLinePoint, int[] secondLinePoint) {
         double n = signedDistance(point, firstLinePoint, secondLinePoint);
         return n < 0;
     }
 
     // checks if their exists any points on the left of the line segment
-    public boolean existsPointLeftOf(int[][] points, int[] firstLinePoint, int[] secondLinePoint) {
+    public static boolean existsPointLeftOf(int[][] points, int[] firstLinePoint, int[] secondLinePoint) {
         for (int[] point : points) {
             if (isPointLeftOf(point, firstLinePoint, secondLinePoint)) {
                 return true;
@@ -163,7 +182,7 @@ public class PenguHull {
         return false;
     }
 
-    private double signedDistance(int[] point, int[] firstLinePoint, int[] secondLinePoint) {
+    public static double signedDistance(int[] point, int[] firstLinePoint, int[] secondLinePoint) {
         int det = (secondLinePoint[0] - firstLinePoint[0]) * (firstLinePoint[1] - point[1])
             - (firstLinePoint[0] - point[0]) * (secondLinePoint[1] - firstLinePoint[1]);
         double len = Math.sqrt(
@@ -173,13 +192,23 @@ public class PenguHull {
         return det / len;
     }
 
-    // i didn't use it
-    private String pointsToPlotString(int[][] points) {
-        return "";
+    public static String pointsToPlotString(int[][] points) {
+        
+        String pointPlotX = "";
+        String pointPlotY = "";
+        
+        for (int[] i : points) {
+            pointPlotX += i[0] + ",";
+            pointPlotY += i[1] + ",";
+        }
+        
+        String result = "\"x\":[" + pointPlotX.substring(0, pointPlotX.length()-1) + "],\n" + "\"y\":[" + pointPlotY.substring(0, pointPlotY.length()-1) + "]";
+        
+        return result;
     }
     
     // divides points based upon their position(left/right) from the line segment
-    private int[][] createSegment(int[][] points, int[] x, int[] y, boolean up) {
+    public static int[][] createSegment(int[][] points, int[] x, int[] y, boolean up) {
         
         int[][] newPoints = new int[points.length][];
         int pointerA = 0;
@@ -205,58 +234,43 @@ public class PenguHull {
         return returnPoints;
     }
     
-    // helpful method
-    private int[][] combineArray(int[][] a, int[][] b) {
-        int[][] c = new int[a.length+b.length][];
-        int pointer = 0;
-        for (int[] i : a) {
-            c[pointer] = i;
-            pointer++;
-        }
-        for (int[] j : b) {
-            c[pointer] = j;
-            pointer++;
-        }
-        return c;
-    }
-    
-    /**
-     * flips the array
-     * ogArray = [a1, a2, a3... an];
-     * newArray = [an ....., a3, a2, a1]
-     * 
-     * didn't use it
-     */
-    private int[][] flipArray(int[][] a) {
-        int[][] b = new int[a.length][];
-        for (int i = 0; i < a.length; i++) {
-            b[a.length-(i+1)] = a[i];
-        }
-        return b;
-    }
-    
-    private void print2DArray(int[][] array) {
-        for (int[] i : array)
-            System.out.println(Arrays.toString(i));
-    }
-    
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
         // main set containing all points
-        int[][] mainSet = new int[][]{
-            new int[]{-1, -1}, new int[]{1, -1},
-            new int[]{3, -1}, new int[]{1, -2},
-            new int[]{1, 1}, new int[]{2, 2},
-            new int[]{3, 2}};
+        int[][] input = {
+                {0,0}, {10,10},
+                {1,5}, {3,7},
+                {7,3}, {9,5},
+                {1,1}, {5,5}, {0,0}, {2,4}, {7,8}, {9,9}, {2,5}
+        };
+        int[][] expectedOutput = {
+                {0,0},
+                {7,3}, {9,5},
+                {10,10},
+                {3,7}, {1,5},
+                {0,0}
+        };
         
-        PenguHull mainClass = new PenguHull();
+        int[][] output = quickHull(input);
         
-        System.out.print("MainSet: ");
-        mainClass.print2DArray(mainSet);
-        System.out.print("ConvexHull: ");
-        mainClass.print2DArray(mainClass.quickHull(mainSet));
+        System.out.println("Original input: ");
+        System.out.println(pointsToPlotString(input));
+        System.out.println("\nConvex Hull: ");
+        System.out.println(pointsToPlotString(output));
+        System.out.println("\nTest Passed: " + checkIfEqual(output));
+    }
+    
+    public static boolean checkIfEqual(int[][] a, int[][] b) {
+        for (int i = 0; i < a.length; i++) {
+            if (a[0][0] != b[0][0] || a[1][1] != b[1][1]) {
+                System.out.println("False");
+                return false;
+            }    
+        }
+        System.out.println("True");
+        return true;
     }
     
 }
