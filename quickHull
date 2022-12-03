@@ -101,7 +101,7 @@ public class PenguHull {
         if (firstHull != null && secondHull != null) {
             int[][] convexHull;
             int pointer = 0;
-            if (firstHull[firstHull.length-1] == secondHull[0]) {
+            if (firstHull[firstHull.length-1][0] == secondHull[0][0] && firstHull[firstHull.length-1][1] == secondHull[0][1]) {
                 // closed Hull
                 convexHull = new int[firstHull.length + secondHull.length - 1][];
 
