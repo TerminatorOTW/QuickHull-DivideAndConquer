@@ -1,7 +1,5 @@
 # QuickHull-DivideAndConquer
 
-[Assignment description]
-
 PenguHull - Tales of a (very) drunk Penguin
 
 Global warming is affecting penguins. After extensive analysis, the excellently studied penguins of the PUM have determined that they have to start keeping farm animals in order to ensure
